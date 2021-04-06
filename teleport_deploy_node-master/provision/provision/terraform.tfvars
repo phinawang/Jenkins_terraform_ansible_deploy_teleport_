@@ -1,0 +1,5 @@
+dest_vpc_id = "vpc-044e28b48a930a851"
+ec2_ami = "ami-0528a5175983e7f28"
+ec2_subnet_id = "subnet-0392cbe2c3cd25882"
+ssh_key_name = "cloud-savvy-jenkins-dba"
+security_group_id = "sg-08f84ad39c47ac8c6"

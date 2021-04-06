@@ -1,0 +1,40 @@
+teleport:
+  auth_token: "e94d68a8a1e5821dbd79d03a960644f0"
+  ca_pin: "teleport_auth_CA_pin"
+  auth_servers:
+    - "auth.teleport.cluster.local:3025"
+  nodename: node
+  advertise_ip: teleport_node_private_ip
+  log:
+    output: syslog
+    severity: INFO
+
+  data_dir: /var/lib/teleport
+#  storage:
+#    type: dynamodb
+#    region: us-east-2
+#    table_name: Teleport-state
+#    audit_events_uri:  ['dynamodb://Teleport-events', 'file:///var/lib/teleport/audit/events', 'stdout://']
+#    audit_sessions_uri: s3://cloud-savvy-teleport-bucket/records
+#    path: /var/lib/teleport/backend
+
+auth_service:
+  enabled: no
+  keep_alive_interval: 1m
+  keep_alive_count_max: 3
+  listen_addr: 0.0.0.0:3025
+  authentication:
+    second_factor: otp
+  cluster_name: "demo_cluster"
+  public_addr: auth.teleport.cluster.local
+
+ssh_service:
+  enabled: yes
+  listen_addr: 0.0.0.0:3022
+
+proxy_service:
+  enabled: no
+  listen_addr: 0.0.0.0:3023
+  tunnel_listen_addr: 0.0.0.0:3080
+  web_listen_addr: 0.0.0.0:3080
+  public_addr: proxy.teleport.cluster.local:3080
