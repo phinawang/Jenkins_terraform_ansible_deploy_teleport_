@@ -1,0 +1,84 @@
+pipeline {
+  agent any
+  stages {
+    stage('Clone New Config') {
+      steps {
+        git(url: ' https://70f831b184868fb6f3680500e2e0616760445d4b@github.trendmicro.com/phina-wang/teleport_deploy_node.git', branch: 'master')
+      }
+    }
+
+    stage('Provision EC2') {
+      parallel {
+        stage('Provision EC2') {
+          steps {
+            sh 'cp -R /var/lib/jenkins/workspace/teleport_deploy_node_master/provision/* /opt/teleport_deploy_node/provision/'
+            sh '''cd /opt/teleport_deploy_node/provision/
+terraform apply -auto-approve'''
+            sh 'pwd'
+            sh 'terraform output -json'
+            slackSend(color: 'good', message: "Status: Terraform auto deploy on AWS | Job: ${env.JOB_NAME} | Build ID ${env.BUILD_NUMBER} ")
+          }
+        }
+
+        stage('check current folder') {
+          steps {
+            sh 'pwd'
+          }
+        }
+
+      }
+    }
+
+    stage('Wait for EC2 initial') {
+      steps {
+        sleep 15
+        sh 'cd /opt/teleport_deploy_node/'
+        sh 'sh check_ec2_instance.sh'
+        slackSend(color: 'good', message: "Status: Terraform auto deploy on AWS | Job: ${env.JOB_NAME} | Build ID ${env.BUILD_NUMBER} ")
+      }
+    }
+
+    stage('Install Tool') {
+      parallel {
+        stage('Install Tool') {
+          steps {
+            echo 'Install Teleport on Each nodes'
+          }
+        }
+
+        stage('Copy file to instances') {
+          steps {
+            sh 'cd /opt/teleport_deploy_node/'
+            sh 'sh move_tools.sh'
+            slackSend(color: 'good', message: "Status: Terraform auto deploy on AWS | Job: ${env.JOB_NAME} | Build ID ${env.BUILD_NUMBER} ")
+          }
+        }
+
+        stage('ansible deploy') {
+          steps {
+            sh 'cd /opt/teleport_deploy_node/install_ansible/'
+            sh 'ansible-playbook -i /opt/teleport_deploy_node/install_ansible/hosts /opt/teleport_deploy_node/install_ansible/playbook.yml'
+          }
+        }
+
+      }
+    }
+
+  }
+  post {
+    success {
+      slackSend(color: 'good', message: "Status: PIPELINE ${currentBuild.result} | Job: ${env.JOB_NAME} | Build ID ${env.BUILD_NUMBER}")
+      archiveArtifacts(artifacts: 'aws_infra/Terraform_Output.json', fingerprint: true)
+      archiveArtifacts(artifacts: 'violations_using_api.py', fingerprint: true)
+    }
+
+    failure {
+      slackSend(color: 'danger', message: "Status: PIPELINE ${currentBuild.result} | Job: ${env.JOB_NAME} | Build ID ${env.BUILD_NUMBER}")
+    }
+
+    aborted {
+      slackSend(color: 'warning', message: "Status: PIPELINE ${currentBuild.result} | Job: ${env.JOB_NAME} | Build ID ${env.BUILD_NUMBER}")
+    }
+
+  }
+}
